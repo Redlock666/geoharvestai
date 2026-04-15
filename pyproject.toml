@@ -17,10 +17,10 @@ dependencies = [
     # Agentic / LLM
     "langchain==0.3.14",
     "langchain-openai==0.3.1",
-    "langgraph==0.2.67",
+    "langgraph==1.0.10rc1",
 
     # GIS / Spatial
-    "geopandas==1.0.1",
+    "geopandas==1.1.2",
     "shapely==2.0.6",
     "pyproj==3.7.0",
     "h3==3.7.7",
@@ -33,7 +33,7 @@ dependencies = [
     "geoalchemy2==0.16.0",
 
     # ML — Time Series
-    "torch==2.5.1",
+    "torch==2.8.0",
     "statsmodels==0.14.4",
     "scikit-learn==1.6.0",
     "numpy==2.2.0",
