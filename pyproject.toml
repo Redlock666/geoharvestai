@@ -1,0 +1,73 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "geoharvestai"
+version = "0.1.0"
+description = "Agentic GIS-powered crop recommendation system"
+requires-python = ">=3.11"
+dependencies = [
+    # API
+    "fastapi==0.115.6",
+    "uvicorn[standard]==0.32.1",
+    "pydantic==2.10.3",
+    "pydantic-settings==2.7.0",
+
+    # Agentic / LLM
+    "langchain==0.3.14",
+    "langchain-openai==0.3.1",
+    "langgraph==0.2.67",
+
+    # GIS / Spatial
+    "geopandas==1.0.1",
+    "shapely==2.0.6",
+    "pyproj==3.7.0",
+    "h3==3.7.7",
+    "rasterio==1.4.3",
+    "sentinelhub==3.10.2",
+
+    # Database
+    "asyncpg==0.30.0",
+    "sqlalchemy[asyncio]==2.0.36",
+    "geoalchemy2==0.16.0",
+
+    # ML — Time Series
+    "torch==2.5.1",
+    "statsmodels==0.14.4",
+    "scikit-learn==1.6.0",
+    "numpy==2.2.0",
+    "pandas==2.2.3",
+
+    # Observability & Resilience
+    "structlog==24.4.0",
+    "tenacity==9.0.0",
+
+    # HTTP
+    "httpx==0.28.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==8.3.4",
+    "pytest-asyncio==0.25.0",
+    "pytest-postgresql==6.1.1",
+    "httpx==0.28.1",
+    "ruff==0.8.6",
+    "mypy==1.14.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
