@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import structlog
 from langgraph.graph import END, StateGraph
+from langgraph.graph.state import CompiledStateGraph
 
 from agents.state import CropRecommendationState
 from services.gis_resolver import GISResolverService
@@ -90,7 +91,7 @@ async def predict_crops_node(state: CropRecommendationState) -> dict:
 
 
 async def generate_reasoning_node(state: CropRecommendationState) -> dict:
-    """Node 4: Generate agronomic reasoning via LLM (GPT-4o via LangChain LCEL).
+    """Node 4: Generate agronomic reasoning via LLM (o3 / GPT-5.x via LangChain LCEL).
 
     Logic Flow:
         Passes full state context to LLMReasonerService.explain().
@@ -116,7 +117,7 @@ async def generate_reasoning_node(state: CropRecommendationState) -> dict:
 
 # ── Graph builder ─────────────────────────────────────────────────────────────
 
-def build_graph() -> StateGraph:
+def build_graph() -> CompiledStateGraph:  # type: ignore[type-arg]
     """Assemble and compile the CropRecommendationState graph.
 
     Logic Flow:
