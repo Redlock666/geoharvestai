@@ -64,6 +64,52 @@ services:
       - ./ml/artifacts:/app/ml/artifacts
     restart: unless-stopped
 
+  # ── One-shot ingest runner ───────────────────────────────────────────────
+  # Usage:  docker compose run --rm ingest python scripts/ingest_soilgrids.py --region IN
+  # The service has no default command — always pass one explicitly.
+  ingest:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file: .env
+    environment:
+      # Scripts talk directly to host-mapped ports when run via docker compose run
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+      TIMESCALE_HOST: timescaledb
+      TIMESCALE_PORT: "5432"
+    depends_on:
+      db:
+        condition: service_healthy
+      timescaledb:
+        condition: service_healthy
+    volumes:
+      - ./ml/artifacts:/app/ml/artifacts
+      - ./data:/app/data          # raw downloaded files
+    profiles: ["ingest"]          # only started when explicitly requested
+
+  # ── One-shot model trainer ───────────────────────────────────────────────
+  # Usage:  docker compose run --rm train python ml/train/train_sarimax.py --region IN
+  train:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file: .env
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+      TIMESCALE_HOST: timescaledb
+      TIMESCALE_PORT: "5432"
+    depends_on:
+      db:
+        condition: service_healthy
+      timescaledb:
+        condition: service_healthy
+    volumes:
+      - ./ml/artifacts:/app/ml/artifacts
+      - ./data:/app/data
+    profiles: ["train"]           # only started when explicitly requested
+
 volumes:
   postgis_data:
   timescale_data:

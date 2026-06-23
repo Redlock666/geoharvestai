@@ -9,3 +9,12 @@ ml/artifacts/
 *.egg-info/
 dist/
 .venv/
+
+# Raw data files — downloaded at runtime, not committed
+data/raw/**/*.tif
+data/raw/**/*.nc
+data/raw/**/*.csv
+data/raw/**/*.zip
+data/raw/**/*.tar.gz
+# Keep directory structure
+!data/raw/**/.gitkeep
