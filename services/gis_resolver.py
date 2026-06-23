@@ -13,7 +13,8 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 import h3
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from models.gis import GISFeatureVector
+from models.gis import GISFeatureVector, SoilHealthProfile, ClimateTrendProfile
+from services.ecosystem_analyzer import EcosystemAnalyzerService
 
 logger = structlog.get_logger(__name__)
 
@@ -54,8 +55,14 @@ class GISResolverService:
         soil = await self._fetch_soil(hex_id)
         terrain = await self._fetch_terrain(hex_id)
         climate_zone = await self._fetch_climate_zone(hex_id)
+        soil_health = await self._fetch_soil_health(hex_id)
+        climate_trend = await self._fetch_climate_trend(hex_id)
+        ecosystem_drift = await EcosystemAnalyzerService(self._db).fetch_report(hex_id)
 
-        log.info("gis.resolve.complete", climate_zone=climate_zone)
+        log.info("gis.resolve.complete", climate_zone=climate_zone,
+                 shc_available=soil_health is not None,
+                 climate_trend_available=climate_trend is not None,
+                 ecosystem_drift_available=ecosystem_drift is not None)
         return GISFeatureVector(
             h3_hex=hex_id,
             lat=lat,
@@ -68,6 +75,9 @@ class GISResolverService:
             elevation_m=terrain["elevation_m"],
             slope_deg=terrain["slope_deg"],
             climate_zone=climate_zone,
+            soil_health=soil_health,
+            climate_trend=climate_trend,
+            ecosystem_drift=ecosystem_drift,
         )
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=8))
@@ -146,6 +156,78 @@ class GISResolverService:
         if row is None:
             raise FeatureNotFoundError(f"No climate zone for hex_id={hex_id}.")
         return str(row["zone_code"])
+
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=8))
+    async def _fetch_soil_health(self, hex_id: str) -> SoilHealthProfile | None:
+        """Fetch Soil Health Card indicators for an H3 hex cell.
+
+        Logic Flow:
+            Queries soil_health_by_hex materialized view populated from India's
+            Soil Health Card scheme (220M+ cards, soilhealth.dac.gov.in).
+            Returns None gracefully when SHC data has not yet been ingested for
+            this hex cell — the recommendation pipeline continues with SoilGrids
+            chemical data only and notes the absence in the reasoning layer.
+
+        Args:
+            hex_id: H3 hex cell identifier at resolution 7.
+
+        Returns:
+            SoilHealthProfile populated with biological and micronutrient fields,
+            or None if no SHC record exists for this hex cell.
+
+        Expected Exceptions:
+            sqlalchemy.exc.OperationalError: PostGIS connection failure.
+        """
+        result = await self._db.execute(
+            "SELECT organic_carbon_pct, electrical_conductivity_ds_m, "
+            "       available_n_kg_ha, available_p_kg_ha, available_k_kg_ha, "
+            "       sulphur_mg_kg, zinc_mg_kg, iron_mg_kg, "
+            "       npk_trend_direction, organic_carbon_trend, "
+            "       n_sufficiency, p_sufficiency, k_sufficiency, oc_sufficiency, "
+            "       biological_collapse_risk "
+            "FROM soil_health_by_hex WHERE hex_id = :hex_id",
+            {"hex_id": hex_id},
+        )
+        row = result.mappings().one_or_none()
+        if row is None:
+            logger.bind(hex_id=hex_id).info(
+                "gis.resolve.shc_missing",
+                note="SHC not yet ingested for this hex — continuing without biological health layer",
+            )
+            return None
+        return SoilHealthProfile(**dict(row))
+
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=8))
+    async def _fetch_climate_trend(self, hex_id: str) -> ClimateTrendProfile | None:
+        """Fetch the ERA5-derived 5-year climate anomaly trend for an H3 hex cell.
+
+        Logic Flow:
+            Queries climate_trend_by_hex view, which stores 5-year rolling rainfall
+            and temperature deviation from the 30-year ERA5 baseline (1991-2020).
+            A negative rainfall_anomaly_mm indicates a drying trend consistent with
+            climate change impact; a positive temp_anomaly_c indicates warming.
+            Returns None when trend data has not yet been computed for this hex.
+
+        Args:
+            hex_id: H3 hex cell identifier at resolution 7.
+
+        Returns:
+            ClimateTrendProfile with anomaly values and regime classification,
+            or None if trend data is unavailable.
+
+        Expected Exceptions:
+            sqlalchemy.exc.OperationalError: PostGIS connection failure.
+        """
+        result = await self._db.execute(
+            "SELECT rainfall_anomaly_mm, rainfall_anomaly_pct, "
+            "       temp_anomaly_c, climate_regime_shift "
+            "FROM climate_trend_by_hex WHERE hex_id = :hex_id",
+            {"hex_id": hex_id},
+        )
+        row = result.mappings().one_or_none()
+        if row is None:
+            return None
+        return ClimateTrendProfile(**dict(row))
 
 
 class FeatureNotFoundError(Exception):
