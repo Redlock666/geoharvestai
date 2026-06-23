@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GeoHarvestAI — Crop Intelligence</title>
+
+  <!-- Leaflet map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    /* ── Reset & base ──────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green-dark:   #1a4d2e;
+      --green-mid:    #2d7a4f;
+      --green-light:  #4caf78;
+      --green-pale:   #e8f5ed;
+      --amber:        #f5a623;
+      --amber-light:  #fff8ec;
+      --red:          #e05252;
+      --slate:        #f4f6f5;
+      --text-dark:    #1c2b22;
+      --text-mid:     #4a6255;
+      --text-light:   #7a9485;
+      --border:       #d3e4d9;
+      --white:        #ffffff;
+      --shadow-sm:    0 1px 4px rgba(0,0,0,.08);
+      --shadow-md:    0 4px 16px rgba(0,0,0,.10);
+      --radius:       12px;
+      --radius-sm:    8px;
+    }
+
+    html, body { height: 100%; font-family: 'Segoe UI', system-ui, sans-serif; background: var(--slate); color: var(--text-dark); }
+
+    /* ── Layout ─────────────────────────────────────────────────────────── */
+    .app { display: grid; grid-template-rows: 64px 1fr; grid-template-columns: 420px 1fr; height: 100vh; }
+
+    /* Header spans full width */
+    header { grid-column: 1 / -1; background: var(--green-dark); display: flex; align-items: center; padding: 0 28px; gap: 14px; box-shadow: var(--shadow-md); z-index: 10; }
+    .logo  { font-size: 22px; font-weight: 700; color: var(--white); letter-spacing: -.3px; }
+    .logo span { color: var(--green-light); }
+    .tagline { font-size: 13px; color: rgba(255,255,255,.55); margin-left: 4px; }
+    .header-right { margin-left: auto; display: flex; gap: 10px; align-items: center; }
+    .badge { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; background: rgba(255,255,255,.12); color: rgba(255,255,255,.8); letter-spacing: .3px; }
+
+    /* Left panel */
+    .panel { background: var(--white); border-right: 1px solid var(--border); overflow-y: auto; display: flex; flex-direction: column; }
+    .panel-inner { padding: 24px; flex: 1; display: flex; flex-direction: column; gap: 20px; }
+
+    /* Map */
+    #map { flex: 1; min-height: 0; }
+
+    /* ── Form ────────────────────────────────────────────────────────────── */
+    .section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: var(--text-light); margin-bottom: 8px; }
+
+    .coord-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    label { font-size: 13px; font-weight: 600; color: var(--text-mid); display: block; margin-bottom: 5px; }
+
+    input, select {
+      width: 100%; padding: 10px 13px; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+      font-size: 14px; color: var(--text-dark); background: var(--slate); outline: none; transition: border .15s;
+    }
+    input:focus, select:focus { border-color: var(--green-mid); background: var(--white); }
+
+    .pin-hint { font-size: 12px; color: var(--text-light); margin-top: -10px; display: flex; align-items: center; gap: 5px; }
+    .pin-hint svg { flex-shrink: 0; }
+
+    /* Season pills */
+    .season-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+    .pill {
+      padding: 7px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer;
+      border: 1.5px solid var(--border); background: var(--white); color: var(--text-mid);
+      transition: all .15s;
+    }
+    .pill:hover  { border-color: var(--green-mid); color: var(--green-mid); }
+    .pill.active { background: var(--green-dark); border-color: var(--green-dark); color: var(--white); }
+
+    /* Top-N slider */
+    .slider-row { display: flex; align-items: center; gap: 12px; }
+    input[type=range] { flex: 1; accent-color: var(--green-mid); }
+    .slider-val { font-size: 14px; font-weight: 700; color: var(--green-dark); min-width: 24px; text-align: right; }
+
+    /* Run button */
+    .btn-run {
+      width: 100%; padding: 14px; border-radius: var(--radius-sm); border: none; cursor: pointer;
+      background: var(--green-mid); color: var(--white); font-size: 15px; font-weight: 700;
+      letter-spacing: .2px; transition: background .15s, transform .1s; display: flex; align-items: center; justify-content: center; gap: 10px;
+    }
+    .btn-run:hover   { background: var(--green-dark); }
+    .btn-run:active  { transform: scale(.98); }
+    .btn-run:disabled { background: var(--border); cursor: not-allowed; color: var(--text-light); }
+    .btn-run .spinner { width: 18px; height: 18px; border: 2.5px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Results panel ───────────────────────────────────────────────────── */
+    .results { padding: 28px; overflow-y: auto; display: flex; flex-direction: column; gap: 24px; }
+
+    .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 14px; color: var(--text-light); }
+    .empty-state svg { opacity: .25; }
+    .empty-state h2 { font-size: 18px; color: var(--text-mid); }
+    .empty-state p  { font-size: 14px; max-width: 300px; line-height: 1.6; }
+
+    /* Meta strip */
+    .meta-strip { display: flex; flex-wrap: wrap; gap: 10px; }
+    .meta-chip { font-size: 12px; font-weight: 600; padding: 5px 12px; border-radius: 20px; background: var(--green-pale); color: var(--green-dark); display: flex; align-items: center; gap: 5px; }
+    .meta-chip.amber { background: var(--amber-light); color: #8a5c00; }
+
+    /* Crop cards grid */
+    .crops-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+
+    .crop-card {
+      background: var(--white); border: 1.5px solid var(--border); border-radius: var(--radius);
+      padding: 18px 20px; display: flex; flex-direction: column; gap: 10px; box-shadow: var(--shadow-sm);
+      transition: box-shadow .15s, border-color .15s;
+    }
+    .crop-card:hover { box-shadow: var(--shadow-md); border-color: var(--green-light); }
+    .crop-card.rank-1 { border-color: var(--green-mid); background: var(--green-pale); }
+
+    .crop-rank { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--text-light); }
+    .rank-1 .crop-rank { color: var(--green-dark); }
+
+    .crop-name { font-size: 18px; font-weight: 700; color: var(--text-dark); display: flex; align-items: center; gap: 8px; }
+    .rank-1 .crop-name { color: var(--green-dark); }
+    .medal { font-size: 20px; }
+
+    .confidence-bar-bg { background: var(--border); border-radius: 4px; height: 7px; overflow: hidden; }
+    .confidence-bar-fill { height: 100%; background: linear-gradient(90deg, var(--green-mid), var(--green-light)); border-radius: 4px; transition: width .6s ease; }
+    .rank-1 .confidence-bar-fill { background: linear-gradient(90deg, var(--green-dark), var(--green-mid)); }
+
+    .crop-stats { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-mid); }
+    .crop-stats .val { font-weight: 700; color: var(--text-dark); }
+
+    .model-tag { font-size: 11px; font-weight: 600; color: var(--text-light); background: var(--slate); padding: 2px 8px; border-radius: 10px; align-self: flex-start; }
+
+    /* Reasoning card */
+    .reasoning-card {
+      background: var(--white); border: 1.5px solid var(--border); border-radius: var(--radius);
+      padding: 22px 24px; box-shadow: var(--shadow-sm);
+    }
+    .reasoning-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+    .reasoning-header svg { color: var(--amber); flex-shrink: 0; }
+    .reasoning-title { font-size: 14px; font-weight: 700; color: var(--text-dark); }
+    .reasoning-model { font-size: 11px; color: var(--text-light); margin-left: auto; }
+    .reasoning-body { font-size: 14px; line-height: 1.8; color: var(--text-mid); white-space: pre-wrap; }
+
+    /* Error banner */
+    .error-banner { background: #fff0f0; border: 1.5px solid #f5c6c6; border-radius: var(--radius-sm); padding: 14px 18px; font-size: 14px; color: var(--red); display: none; }
+    .error-banner.show { display: block; }
+
+    /* NDVI staleness warning */
+    .stale-warning { font-size: 12px; color: #8a5c00; background: var(--amber-light); border-radius: var(--radius-sm); padding: 8px 12px; }
+
+    /* Responsive — stack on small screens */
+    @media (max-width: 820px) {
+      .app { grid-template-columns: 1fr; grid-template-rows: 64px auto 1fr; }
+      .panel { max-height: 480px; border-right: none; border-bottom: 1px solid var(--border); }
+      #map { min-height: 220px; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ── Header ─────────────────────────────────────────────────────────── -->
+  <header>
+    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="14" cy="14" r="13" fill="#2d7a4f" stroke="#4caf78" stroke-width="1.5"/>
+      <path d="M9 18 C9 12 14 8 19 10 C16 10 14 13 14 18" fill="#4caf78"/>
+      <path d="M14 18 C14 13 18 10 22 12 C19 11 17 14 17 18" fill="#a8d5b5"/>
+      <line x1="14" y1="18" x2="14" y2="22" stroke="#4caf78" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+    <div>
+      <div class="logo">GeoHarvest<span>AI</span></div>
+    </div>
+    <div class="tagline">Precision crop intelligence for Indian agriculture</div>
+    <div class="header-right">
+      <a href="/pitch" target="_blank" style="font-size:12px;font-weight:600;color:rgba(255,255,255,.7);text-decoration:none;padding:4px 12px;border:1px solid rgba(255,255,255,.2);border-radius:6px;">About this solution ↗</a>
+      <span class="badge">DEMO</span>
+      <span class="badge">India · 2026</span>
+    </div>
+  </header>
+
+  <!-- ── Left panel: controls ──────────────────────────────────────────── -->
+  <aside class="panel">
+    <div id="map"></div>
+    <div class="panel-inner">
+
+      <div>
+        <div class="section-title">Location</div>
+        <div class="coord-row">
+          <div>
+            <label for="lat">Latitude</label>
+            <input type="number" id="lat" step="0.0001" placeholder="e.g. 20.5" />
+          </div>
+          <div>
+            <label for="lon">Longitude</label>
+            <input type="number" id="lon" step="0.0001" placeholder="e.g. 78.9" />
+          </div>
+        </div>
+        <p class="pin-hint">
+          <svg width="13" height="13" fill="none" viewBox="0 0 13 13"><circle cx="6.5" cy="6.5" r="5.5" stroke="#7a9485" stroke-width="1.2"/><line x1="6.5" y1="4" x2="6.5" y2="7" stroke="#7a9485" stroke-width="1.4" stroke-linecap="round"/><circle cx="6.5" cy="9" r=".8" fill="#7a9485"/></svg>
+          Click anywhere on the map to auto-fill coordinates
+        </p>
+      </div>
+
+      <div>
+        <label for="region">Region Code</label>
+        <input type="text" id="region" value="IN" maxlength="6" style="text-transform:uppercase;" />
+      </div>
+
+      <div>
+        <div class="section-title">Season</div>
+        <div class="season-pills" id="season-pills">
+          <button class="pill active" data-season="kharif_2026">☀️ Kharif 2026</button>
+          <button class="pill" data-season="rabi_2026">🌾 Rabi 2026</button>
+          <button class="pill" data-season="zaid_2026">🌱 Zaid 2026</button>
+          <button class="pill" data-season="kharif_2027">☀️ Kharif 2027</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-title">Number of recommendations</div>
+        <div class="slider-row">
+          <input type="range" id="top-n" min="3" max="10" value="5" step="1" oninput="document.getElementById('top-n-val').textContent=this.value" />
+          <span class="slider-val" id="top-n-val">5</span>
+        </div>
+      </div>
+
+      <div class="error-banner" id="error-banner"></div>
+
+      <button class="btn-run" id="btn-run" onclick="runRecommendation()">
+        <svg width="18" height="18" fill="none" viewBox="0 0 18 18"><circle cx="9" cy="9" r="7.5" stroke="white" stroke-width="1.5"/><path d="M7 6l5 3-5 3V6z" fill="white"/></svg>
+        Get Crop Recommendations
+      </button>
+
+    </div>
+  </aside>
+
+  <!-- ── Right panel: results ──────────────────────────────────────────── -->
+  <main class="results" id="results">
+    <div class="empty-state" id="empty-state">
+      <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
+        <circle cx="40" cy="40" r="36" stroke="#2d7a4f" stroke-width="2" stroke-dasharray="6 4"/>
+        <path d="M28 50 C28 36 40 24 52 28 C46 28 40 36 40 50" fill="#2d7a4f" opacity=".4"/>
+        <path d="M40 50 C40 36 50 28 60 32 C54 30 50 38 50 50" fill="#4caf78" opacity=".4"/>
+        <line x1="40" y1="50" x2="40" y2="58" stroke="#2d7a4f" stroke-width="2.5" stroke-linecap="round" opacity=".5"/>
+      </svg>
+      <h2>Pin a location to begin</h2>
+      <p>Click anywhere on the India map, select a season, and run the AI engine to see crop recommendations with agronomic reasoning.</p>
+    </div>
+    <div id="result-content" style="display:none; flex-direction:column; gap:20px;">
+      <!-- populated by JS -->
+    </div>
+  </main>
+
+</div>
+
+<script>
+// ── Map setup ──────────────────────────────────────────────────────────────
+const map = L.map('map', { zoomControl: true, attributionControl: false })
+  .setView([20.5, 79.0], 4);
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+  maxZoom: 18,
+}).addTo(map);
+
+// India approximate bounds — soft clamp only (user can still pan)
+const INDIA_BOUNDS = L.latLngBounds([[6.5, 68.0], [37.6, 97.5]]);
+
+const pinIcon = L.divIcon({
+  html: `<svg width="28" height="36" viewBox="0 0 28 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M14 0C6.268 0 0 6.268 0 14c0 10.5 14 22 14 22s14-11.5 14-22C28 6.268 21.732 0 14 0z" fill="#2d7a4f"/>
+    <circle cx="14" cy="14" r="5.5" fill="white"/>
+  </svg>`,
+  className: '',
+  iconSize: [28, 36],
+  iconAnchor: [14, 36],
+});
+
+let marker = null;
+
+map.on('click', (e) => {
+  const { lat, lng } = e.latlng;
+  document.getElementById('lat').value = lat.toFixed(4);
+  document.getElementById('lon').value = lng.toFixed(4);
+  if (marker) map.removeLayer(marker);
+  marker = L.marker([lat, lng], { icon: pinIcon }).addTo(map);
+  // pulse the run button
+  const btn = document.getElementById('btn-run');
+  btn.style.boxShadow = '0 0 0 4px rgba(45,122,79,.25)';
+  setTimeout(() => btn.style.boxShadow = '', 600);
+});
+
+// ── Season pills ───────────────────────────────────────────────────────────
+let selectedSeason = 'kharif_2026';
+document.getElementById('season-pills').addEventListener('click', (e) => {
+  const pill = e.target.closest('.pill');
+  if (!pill) return;
+  document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+  pill.classList.add('active');
+  selectedSeason = pill.dataset.season;
+});
+
+// ── API call ───────────────────────────────────────────────────────────────
+async function runRecommendation() {
+  const lat    = parseFloat(document.getElementById('lat').value);
+  const lon    = parseFloat(document.getElementById('lon').value);
+  const region = document.getElementById('region').value.trim().toUpperCase() || 'IN';
+  const topN   = parseInt(document.getElementById('top-n').value, 10);
+
+  const errBanner = document.getElementById('error-banner');
+  errBanner.classList.remove('show');
+
+  if (isNaN(lat) || isNaN(lon)) {
+    errBanner.textContent = 'Please click the map or enter a latitude/longitude first.';
+    errBanner.classList.add('show');
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const resp = await fetch('/recommend', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lat, lon, season: selectedSeason, region_code: region, top_n: topN }),
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      const detail = err.detail || `HTTP ${resp.status}`;
+      throw new Error(detail);
+    }
+
+    const data = await resp.json();
+    renderResults(data, lat, lon, region);
+  } catch (err) {
+    errBanner.textContent = `Error: ${err.message}`;
+    errBanner.classList.add('show');
+  } finally {
+    setLoading(false);
+  }
+}
+
+function setLoading(on) {
+  const btn = document.getElementById('btn-run');
+  btn.disabled = on;
+  btn.innerHTML = on
+    ? `<div class="spinner"></div> Running AI pipeline…`
+    : `<svg width="18" height="18" fill="none" viewBox="0 0 18 18"><circle cx="9" cy="9" r="7.5" stroke="white" stroke-width="1.5"/><path d="M7 6l5 3-5 3V6z" fill="white"/></svg> Get Crop Recommendations`;
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────
+const CROP_EMOJIS = {
+  rice: '🌾', wheat: '🌾', maize: '🌽', corn: '🌽', cotton: '🌿',
+  sugarcane: '🎋', soybean: '🫘', soya: '🫘', groundnut: '🥜', potato: '🥔',
+  onion: '🧅', tomato: '🍅', mustard: '🌼', sunflower: '🌻', jowar: '🌾',
+  bajra: '🌾', ragi: '🌾', tur: '🫘', gram: '🫘', lentil: '🫘',
+  turmeric: '🌿', ginger: '🌿', chilli: '🌶️', banana: '🍌', mango: '🥭',
+};
+
+function cropEmoji(name) {
+  const key = (name || '').toLowerCase();
+  for (const [k, v] of Object.entries(CROP_EMOJIS)) {
+    if (key.includes(k)) return v;
+  }
+  return '🌱';
+}
+
+const MEDALS = ['🥇', '🥈', '🥉'];
+
+function renderResults(data, lat, lon, region) {
+  document.getElementById('empty-state').style.display = 'none';
+  const container = document.getElementById('result-content');
+  container.style.display = 'flex';
+
+  const season = selectedSeason.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
+  const ndviAge = data.ndvi_freshness_days;
+  const ndviWarning = ndviAge > 5
+    ? `<div class="stale-warning">⚠️ NDVI data is ${ndviAge} days old — Sentinel-2 refresh pending</div>`
+    : '';
+
+  container.innerHTML = `
+    <!-- Meta strip -->
+    <div class="meta-strip">
+      <span class="meta-chip">📍 ${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E</span>
+      <span class="meta-chip">🗓️ ${season}</span>
+      <span class="meta-chip">🌐 ${region}</span>
+      <span class="meta-chip">⬡ ${data.h3_hex}</span>
+      ${ndviAge <= 5 ? `<span class="meta-chip">🛰️ NDVI ${ndviAge}d fresh</span>` : `<span class="meta-chip amber">🛰️ NDVI ${ndviAge}d old</span>`}
+    </div>
+    ${ndviWarning}
+
+    <!-- Crops grid -->
+    <div>
+      <div class="section-title" style="margin-bottom:12px;">Top Recommendations</div>
+      <div class="crops-grid" id="crops-grid"></div>
+    </div>
+
+    <!-- Reasoning -->
+    <div class="reasoning-card">
+      <div class="reasoning-header">
+        <svg width="20" height="20" fill="none" viewBox="0 0 20 20">
+          <circle cx="10" cy="10" r="8.5" stroke="#f5a623" stroke-width="1.5"/>
+          <path d="M10 6v5l3 2" stroke="#f5a623" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <span class="reasoning-title">Agronomic Intelligence</span>
+        <span class="reasoning-model">Powered by o3 reasoning model</span>
+      </div>
+      <div class="reasoning-body" id="reasoning-body">${data.reasoning || '<em style="color:var(--text-light)">No reasoning returned — check OPENAI_API_KEY in .env</em>'}</div>
+    </div>
+  `;
+
+  const grid = document.getElementById('crops-grid');
+  (data.recommendations || []).forEach((crop, i) => {
+    const pct = Math.round(crop.confidence * 100);
+    const card = document.createElement('div');
+    card.className = `crop-card${i === 0 ? ' rank-1' : ''}`;
+    card.innerHTML = `
+      <div class="crop-rank">${i < 3 ? MEDALS[i] + ' ' : ''}Rank ${i + 1}</div>
+      <div class="crop-name">${cropEmoji(crop.crop_name)} ${crop.crop_name}</div>
+      <div class="confidence-bar-bg"><div class="confidence-bar-fill" style="width:${pct}%"></div></div>
+      <div class="crop-stats">
+        <span>Confidence <span class="val">${pct}%</span></span>
+        <span>Yield est. <span class="val">${crop.yield_estimate_kg_ha.toLocaleString('en-IN')} kg/ha</span></span>
+      </div>
+      <span class="model-tag">${crop.model_used}</span>
+    `;
+    grid.appendChild(card);
+  });
+
+  // Scroll results into view smoothly
+  document.getElementById('results').scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
+</body>
+</html>

@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from api.routes import recommend
 
@@ -17,6 +21,8 @@ structlog.configure(
 )
 
 logger = structlog.get_logger(__name__)
+
+_STATIC_DIR = Path(__file__).parent / "static"
 
 app = FastAPI(
     title="GeoHarvestAI",
@@ -31,7 +37,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")
 app.include_router(recommend.router)
+
+
+@app.get("/", include_in_schema=False)
+async def serve_ui() -> FileResponse:
+    """Serve the demo UI."""
+    return FileResponse(str(_STATIC_DIR / "index.html"))
+
+
+@app.get("/pitch", include_in_schema=False)
+async def serve_pitch() -> FileResponse:
+    """Serve the client-facing pitch page."""
+    return FileResponse(str(_STATIC_DIR / "pitch.html"))
 
 
 @app.get("/health", tags=["ops"])

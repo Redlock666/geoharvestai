@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GeoHarvestAI — Precision Crop Intelligence for India</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green-dark:   #1a4d2e;
+      --green-mid:    #2d7a4f;
+      --green-light:  #4caf78;
+      --green-pale:   #e8f5ed;
+      --amber:        #f5a623;
+      --amber-pale:   #fff8ec;
+      --slate:        #f4f6f5;
+      --white:        #ffffff;
+      --text-dark:    #1c2b22;
+      --text-mid:     #4a6255;
+      --text-light:   #7a9485;
+      --border:       #d3e4d9;
+      --shadow-sm:    0 2px 8px rgba(0,0,0,.07);
+      --shadow-md:    0 6px 24px rgba(0,0,0,.10);
+      --radius:       14px;
+      --radius-sm:    8px;
+    }
+
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; color: var(--text-dark); background: var(--white); line-height: 1.6; }
+
+    /* ── Utility ── */
+    .container { max-width: 1080px; margin: 0 auto; padding: 0 28px; }
+    .tag { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; padding: 4px 12px; border-radius: 20px; }
+    .tag-green { background: var(--green-pale); color: var(--green-dark); }
+    .tag-amber { background: var(--amber-pale); color: #7a4e00; }
+
+    /* ── Nav ── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(255,255,255,.95); backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 28px; height: 62px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .nav-logo { font-size: 20px; font-weight: 800; color: var(--green-dark); text-decoration: none; }
+    .nav-logo span { color: var(--green-light); }
+    .nav-links { display: flex; gap: 28px; }
+    .nav-links a { font-size: 14px; font-weight: 600; color: var(--text-mid); text-decoration: none; }
+    .nav-links a:hover { color: var(--green-dark); }
+    .nav-cta {
+      background: var(--green-mid); color: var(--white) !important;
+      padding: 8px 20px; border-radius: 8px; font-size: 13px !important;
+    }
+    .nav-cta:hover { background: var(--green-dark) !important; color: var(--white) !important; }
+
+    /* ── Hero ── */
+    .hero {
+      background: linear-gradient(145deg, var(--green-dark) 0%, #0f3320 100%);
+      color: var(--white); padding: 100px 0 80px;
+      position: relative; overflow: hidden;
+    }
+    .hero::before {
+      content: ''; position: absolute; inset: 0;
+      background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%234caf78' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+    .hero-inner { position: relative; z-index: 1; max-width: 680px; }
+    .hero-eyebrow { margin-bottom: 18px; }
+    .hero h1 { font-size: clamp(34px, 5vw, 52px); font-weight: 800; line-height: 1.15; margin-bottom: 22px; letter-spacing: -.5px; }
+    .hero h1 em { color: var(--green-light); font-style: normal; }
+    .hero p { font-size: 18px; color: rgba(255,255,255,.78); max-width: 560px; line-height: 1.75; margin-bottom: 36px; }
+    .hero-actions { display: flex; gap: 14px; flex-wrap: wrap; }
+    .btn-primary {
+      padding: 14px 28px; border-radius: 10px; font-size: 15px; font-weight: 700;
+      background: var(--green-light); color: var(--green-dark);
+      text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
+      transition: background .15s;
+    }
+    .btn-primary:hover { background: #6dd496; }
+    .btn-outline {
+      padding: 14px 28px; border-radius: 10px; font-size: 15px; font-weight: 700;
+      border: 2px solid rgba(255,255,255,.35); color: var(--white);
+      text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
+      transition: border-color .15s;
+    }
+    .btn-outline:hover { border-color: rgba(255,255,255,.7); }
+
+    /* Hero stats row */
+    .hero-stats { display: flex; gap: 0; margin-top: 56px; border-top: 1px solid rgba(255,255,255,.12); padding-top: 40px; flex-wrap: wrap; }
+    .stat { flex: 1; min-width: 160px; padding-right: 32px; }
+    .stat-num { font-size: 36px; font-weight: 800; color: var(--white); letter-spacing: -1px; }
+    .stat-num span { color: var(--green-light); }
+    .stat-label { font-size: 13px; color: rgba(255,255,255,.55); margin-top: 4px; }
+
+    /* ── Section shared styles ── */
+    section { padding: 80px 0; }
+    .section-eyebrow { margin-bottom: 12px; }
+    .section-title { font-size: clamp(26px, 3.5vw, 38px); font-weight: 800; color: var(--text-dark); line-height: 1.2; margin-bottom: 16px; }
+    .section-sub { font-size: 17px; color: var(--text-mid); max-width: 580px; line-height: 1.75; }
+
+    /* ── Problem ── */
+    .problem { background: var(--slate); }
+    .problem-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-top: 48px; }
+    .problem-card { background: var(--white); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 28px; }
+    .problem-icon { font-size: 28px; margin-bottom: 14px; }
+    .problem-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+    .problem-card p { font-size: 14px; color: var(--text-mid); line-height: 1.7; }
+
+    /* ── How it works ── */
+    .pipeline { margin-top: 56px; display: flex; flex-direction: column; gap: 0; }
+    .step { display: grid; grid-template-columns: 56px 1fr; gap: 20px; position: relative; padding-bottom: 32px; }
+    .step:not(:last-child)::after { content: ''; position: absolute; left: 27px; top: 56px; bottom: 0; width: 2px; background: var(--border); }
+    .step-num { width: 56px; height: 56px; border-radius: 50%; background: var(--green-dark); color: var(--white); font-size: 18px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; z-index: 1; }
+    .step-body { padding-top: 14px; }
+    .step-body h3 { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+    .step-body p { font-size: 14px; color: var(--text-mid); line-height: 1.7; }
+    .step-sources { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .source-chip { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 12px; background: var(--green-pale); color: var(--green-dark); }
+
+    /* ── What you get ── */
+    .output-section { background: var(--green-dark); color: var(--white); }
+    .output-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-top: 48px; }
+    .output-card { background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12); border-radius: var(--radius); padding: 28px; }
+    .output-card .icon { font-size: 32px; margin-bottom: 16px; }
+    .output-card h3 { font-size: 17px; font-weight: 700; margin-bottom: 10px; }
+    .output-card p { font-size: 14px; color: rgba(255,255,255,.65); line-height: 1.75; }
+    .output-card .example { margin-top: 14px; background: rgba(255,255,255,.08); border-radius: 8px; padding: 12px 14px; font-size: 13px; color: rgba(255,255,255,.8); font-family: monospace; line-height: 1.6; }
+    .output-section .section-title { color: var(--white); }
+    .output-section .section-sub { color: rgba(255,255,255,.65); }
+
+    /* ── Data sources ── */
+    .data-table { width: 100%; margin-top: 40px; border-collapse: collapse; }
+    .data-table th { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--text-light); border-bottom: 2px solid var(--border); padding: 10px 14px; text-align: left; }
+    .data-table td { font-size: 14px; padding: 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    .data-table tr:hover td { background: var(--slate); }
+    .data-table td:first-child { font-weight: 600; color: var(--text-dark); }
+    .free-badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; background: var(--green-pale); color: var(--green-dark); }
+
+    /* ── Tech ── */
+    .tech-section { background: var(--slate); }
+    .tech-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 40px; }
+    .tech-card { background: var(--white); border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 20px 22px; }
+    .tech-category { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: var(--text-light); margin-bottom: 10px; }
+    .tech-items { display: flex; flex-direction: column; gap: 6px; }
+    .tech-item { font-size: 13px; font-weight: 600; color: var(--text-dark); display: flex; align-items: center; gap: 7px; }
+    .tech-item::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--green-mid); flex-shrink: 0; }
+
+    /* ── Use cases ── */
+    .usecase-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-top: 48px; }
+    .usecase-card { border: 1.5px solid var(--border); border-radius: var(--radius); padding: 28px; }
+    .usecase-card .uc-icon { font-size: 26px; margin-bottom: 14px; }
+    .usecase-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 10px; }
+    .usecase-card p { font-size: 14px; color: var(--text-mid); line-height: 1.7; }
+    .usecase-card ul { margin-top: 12px; padding-left: 16px; font-size: 13px; color: var(--text-mid); line-height: 1.9; }
+
+    /* ── CTA ── */
+    .cta-section { background: linear-gradient(135deg, var(--green-dark), #0e2f1c); color: var(--white); text-align: center; }
+    .cta-section .section-title { color: var(--white); }
+    .cta-section .section-sub { color: rgba(255,255,255,.65); margin: 0 auto 36px; }
+    .cta-buttons { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; }
+    .btn-white { padding: 14px 32px; border-radius: 10px; font-size: 15px; font-weight: 700; background: var(--white); color: var(--green-dark); text-decoration: none; }
+    .btn-white:hover { background: var(--green-pale); }
+
+    /* ── Footer ── */
+    footer { background: #0f1f14; color: rgba(255,255,255,.4); text-align: center; padding: 28px; font-size: 13px; }
+    footer strong { color: rgba(255,255,255,.7); }
+
+    /* ── Responsive ── */
+    @media (max-width: 640px) {
+      .nav-links { display: none; }
+      .hero { padding: 60px 0 50px; }
+      .hero-stats { gap: 24px; }
+      .step { grid-template-columns: 44px 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Nav ──────────────────────────────────────────────────────────────── -->
+<nav>
+  <a class="nav-logo" href="#">GeoHarvest<span>AI</span></a>
+  <div class="nav-links">
+    <a href="#how-it-works">How it works</a>
+    <a href="#outputs">What you get</a>
+    <a href="#data">Data sources</a>
+    <a href="#use-cases">Use cases</a>
+    <a href="/" class="nav-cta">▶ Live Demo</a>
+  </div>
+</nav>
+
+<!-- ── Hero ─────────────────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-inner">
+      <div class="hero-eyebrow">
+        <span class="tag tag-green">India · 2026</span>
+        &nbsp;
+        <span class="tag" style="background:rgba(255,255,255,.12);color:rgba(255,255,255,.8);">AI-Powered · GIS-Native · Production Ready</span>
+      </div>
+      <h1>Tell any field in India<br/><em>exactly what to grow.</em></h1>
+      <p>
+        GeoHarvestAI fuses satellite soil maps, 15 years of weather history,
+        real-time NDVI crop health, and AI reasoning to deliver crop
+        recommendations — for any coordinate in India — in under three seconds.
+      </p>
+      <div class="hero-actions">
+        <a href="/" class="btn-primary">
+          ▶ &nbsp;Try the live demo
+        </a>
+        <a href="#how-it-works" class="btn-outline">
+          See how it works →
+        </a>
+      </div>
+
+      <div class="hero-stats">
+        <div class="stat">
+          <div class="stat-num">637<span>K</span></div>
+          <div class="stat-label">H3 hex cells covering all of India</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num">15<span>+</span></div>
+          <div class="stat-label">Years of historical weather data</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num">40<span>+</span></div>
+          <div class="stat-label">Crops modelled per region</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num">&lt;3<span>s</span></div>
+          <div class="stat-label">End-to-end recommendation latency</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Problem ───────────────────────────────────────────────────────────── -->
+<section class="problem">
+  <div class="container">
+    <div class="section-eyebrow"><span class="tag tag-amber">The Problem</span></div>
+    <h2 class="section-title">Indian farmers lose ₹1.5 lakh crore annually<br/>to wrong crop decisions.</h2>
+    <p class="section-sub">Most advisory systems are generic, paper-based, or require expensive agronomist visits. None of them combine real-time satellite data, local soil science, and AI reasoning in a single query.</p>
+    <div class="problem-grid">
+      <div class="problem-card">
+        <div class="problem-icon">📋</div>
+        <h3>Generic advisories</h3>
+        <p>State-level crop calendars ignore district-level soil variation of up to 400% in nitrogen content across 50 km.</p>
+      </div>
+      <div class="problem-card">
+        <div class="problem-icon">🌧️</div>
+        <h3>Weather-blind decisions</h3>
+        <p>Sowing decisions are made without current rainfall deficits or the 7-day NDVI crop health signal from satellite.</p>
+      </div>
+      <div class="problem-card">
+        <div class="problem-icon">📉</div>
+        <h3>No yield forecasting</h3>
+        <p>Buyers and input companies cannot plan procurement or credit deployment without district-level yield estimates.</p>
+      </div>
+      <div class="problem-card">
+        <div class="problem-icon">🗣️</div>
+        <h3>Expertise not scalable</h3>
+        <p>There are 1 agronomist per 1,000 farmers in India. Expert knowledge can't reach 140 million farm households at scale.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── How it works ──────────────────────────────────────────────────────── -->
+<section id="how-it-works">
+  <div class="container">
+    <div class="section-eyebrow"><span class="tag tag-green">How It Works</span></div>
+    <h2 class="section-title">Four stages. One recommendation.<br/>Under three seconds.</h2>
+    <p class="section-sub">A single API call — with just latitude, longitude, and season — triggers a four-stage AI pipeline that fuses GIS, weather, ML forecasting, and LLM reasoning.</p>
+
+    <div class="pipeline">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <h3>Resolve the field's physical fingerprint</h3>
+          <p>Coordinates are mapped to an H3 hex cell (~5 km²). PostGIS returns soil nitrogen, phosphorus, potassium, pH, texture class, elevation, slope, and Köppen-Geiger climate zone — all pre-indexed for sub-millisecond lookup.</p>
+          <div class="step-sources">
+            <span class="source-chip">SoilGrids v2 (ISRIC)</span>
+            <span class="source-chip">SRTM 30m DEM</span>
+            <span class="source-chip">Beck 2018 Climate Map</span>
+            <span class="source-chip">ICAR 15-Zone Classification</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <h3>Fetch real-time weather &amp; crop health</h3>
+          <p>7-day rainfall, temperature range, and humidity are served from a TimescaleDB cache refreshed nightly via ERA5. NDVI — the satellite measure of crop canopy health — is updated every 5 days via Sentinel-2.</p>
+          <div class="step-sources">
+            <span class="source-chip">ERA5-Land (Copernicus)</span>
+            <span class="source-chip">Open-Meteo (real-time)</span>
+            <span class="source-chip">Sentinel-2 NDVI</span>
+            <span class="source-chip">MODIS MOD13A2 (history)</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <h3>Run the ML ensemble</h3>
+          <p>A SARIMAX model captures seasonal crop cycles and is used when data history is limited. An LSTM network learns non-linear weather-yield relationships from 15 years of district-level data. Both models are ensembled, producing a confidence score and yield estimate (kg/ha) for each crop.</p>
+          <div class="step-sources">
+            <span class="source-chip">LSTM (PyTorch)</span>
+            <span class="source-chip">SARIMAX (statsmodels)</span>
+            <span class="source-chip">APY Portal 1966–2026</span>
+            <span class="source-chip">ICRISAT VDSA</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <h3>Generate agronomic reasoning</h3>
+          <p>OpenAI's o3 reasoning model explains <em>why</em> each top crop was recommended — covering soil fit, weather risk, market timing, and sowing advice — in plain language a field agent or farmer can act on immediately.</p>
+          <div class="step-sources">
+            <span class="source-chip">OpenAI o3</span>
+            <span class="source-chip">LangGraph orchestration</span>
+            <span class="source-chip">LangChain LCEL</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── What you get ───────────────────────────────────────────────────────── -->
+<section class="output-section" id="outputs">
+  <div class="container">
+    <div class="section-eyebrow"><span class="tag" style="background:rgba(255,255,255,.12);color:rgba(255,255,255,.8);">API Response</span></div>
+    <h2 class="section-title">Everything you need,<br/>in one structured response.</h2>
+    <p class="section-sub">Every API call returns a complete, structured JSON payload. Integrate it into your app, dashboard, or field agent tool in hours, not months.</p>
+
+    <div class="output-grid">
+      <div class="output-card">
+        <div class="icon">🌾</div>
+        <h3>Ranked crop recommendations</h3>
+        <p>Up to 20 crops ranked by confidence score, each with a yield estimate in kg/ha and the model that produced it.</p>
+        <div class="example">
+          crop_name: "Wheat"<br/>
+          confidence: 0.87<br/>
+          yield_estimate_kg_ha: 3420<br/>
+          model_used: "ensemble"
+        </div>
+      </div>
+      <div class="output-card">
+        <div class="icon">🧪</div>
+        <h3>Full soil &amp; terrain profile</h3>
+        <p>The complete soil fingerprint used in the recommendation — nitrogen, phosphorus, potassium, pH, texture, elevation, slope, and climate zone.</p>
+        <div class="example">
+          soil_ph: 6.8<br/>
+          soil_nitrogen: 1.4 g/kg<br/>
+          climate_zone: "Cwa"<br/>
+          elevation_m: 312
+        </div>
+      </div>
+      <div class="output-card">
+        <div class="icon">🛰️</div>
+        <h3>Live weather snapshot</h3>
+        <p>7-day accumulated rainfall, temperature range, and NDVI — with a freshness indicator so you know exactly how current the satellite data is.</p>
+        <div class="example">
+          rainfall_7d_mm: 42.3<br/>
+          temp_avg_c: 28.1<br/>
+          ndvi: 0.61<br/>
+          ndvi_freshness_days: 3
+        </div>
+      </div>
+      <div class="output-card">
+        <div class="icon">💬</div>
+        <h3>Agronomic reasoning</h3>
+        <p>A 150–250 word expert explanation in plain English: why each crop is recommended, the key risk factor, and a market timing tip.</p>
+        <div class="example">
+          "Wheat is strongly suited to this<br/>
+          location's Cwa climate and loam<br/>
+          texture. The 42mm rainfall over<br/>
+          7 days provides adequate soil<br/>
+          moisture for germination…"
+        </div>
+      </div>
+      <div class="output-card">
+        <div class="icon">⬡</div>
+        <h3>Spatial index included</h3>
+        <p>Every response includes the H3 hex identifier, enabling downstream spatial aggregation, district-level dashboards, and map visualisation.</p>
+        <div class="example">
+          h3_hex: "8765b4a4fffffff"<br/>
+          region_code: "IN"<br/>
+          season: "rabi_2026"
+        </div>
+      </div>
+      <div class="output-card">
+        <div class="icon">⚡</div>
+        <h3>Production-ready API</h3>
+        <p>Single POST endpoint. Fully async. Structured error codes for missing data or untrained regions. Docker-deployable in minutes. OpenAPI docs included.</p>
+        <div class="example">
+          POST /recommend<br/>
+          &#123; lat, lon, season,<br/>
+          &nbsp;&nbsp;region_code, top_n &#125;<br/>
+          → 200 OK in &lt;3s
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Data sources ───────────────────────────────────────────────────────── -->
+<section id="data">
+  <div class="container">
+    <div class="section-eyebrow"><span class="tag tag-green">Data Sources</span></div>
+    <h2 class="section-title">Built on the most authoritative<br/>agronomic datasets available for India.</h2>
+    <p class="section-sub">Every data source is either freely available, publicly licensed, or sourced directly from Indian government portals. No proprietary data lock-in.</p>
+
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Dataset</th>
+          <th>What it powers</th>
+          <th>Source</th>
+          <th>Update frequency</th>
+          <th>Cost</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>SoilGrids v2</td>
+          <td>Soil NPK, pH, texture — 250 m resolution</td>
+          <td>ISRIC (Netherlands)</td>
+          <td>Static / one-time</td>
+          <td><span class="free-badge">Free</span></td>
+        </tr>
+        <tr>
+          <td>SRTM GL1 DEM</td>
+          <td>Elevation + slope — 30 m resolution</td>
+          <td>NASA / OpenTopography</td>
+          <td>Static / one-time</td>
+          <td><span class="free-badge">Free</span></td>
+        </tr>
+        <tr>
+          <td>Beck Köppen-Geiger</td>
+          <td>Climate zone classification — 1 km</td>
+          <td>figshare / Nature</td>
+          <td>Static / one-time</td>
+          <td><span class="free-badge">Free</span></td>
+        </tr>
+        <tr>
+          <td>ERA5-Land</td>
+          <td>15-year daily weather history (ML training)</td>
+          <td>Copernicus / ECMWF</td>
+          <td>Daily (CDS API)</td>
+          <td><span class="free-badge">Free</span></td>
+        </tr>
+        <tr>
+          <td>Open-Meteo</td>
+          <td>Real-time weather refresh (daily worker)</td>
+          <td>Open-Meteo.com</td>
+          <td>Hourly</td>
+          <td><span class="free-badge">Free</span></td>
+        </tr>
+        <tr>
+          <td>Sentinel-2 NDVI</td>
+          <td>Live crop canopy health — 10 m resolution</td>
+          <td>ESA / Sentinel Hub</td>
+          <td>5-day revisit</td>
+          <td>API key required</td>
+        </tr>
+        <tr>
+          <td>MODIS MOD13A2</td>
+          <td>16-year NDVI history for LSTM training</td>
+          <td>NASA EarthData</td>
+          <td>16-day composite</td>
+          <td><span class="free-badge">Free</span></td>
+        </tr>
+        <tr>
+          <td>APY Portal (MoA&amp;FW)</td>
+          <td>District × season × crop yield 1966–2026</td>
+          <td>Govt of India</td>
+          <td>Annual</td>
+          <td><span class="free-badge">Free</span></td>
+        </tr>
+        <tr>
+          <td>ICRISAT VDSA</td>
+          <td>Village-level yield for LSTM fine-tuning</td>
+          <td>ICRISAT</td>
+          <td>Annual</td>
+          <td><span class="free-badge">Free (registration)</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ── Technology ─────────────────────────────────────────────────────────── -->
+<section class="tech-section">
+  <div class="container">
+    <div class="section-eyebrow"><span class="tag tag-green">Technology</span></div>
+    <h2 class="section-title">Production-grade stack.<br/>No vendor lock-in.</h2>
+    <p class="section-sub">Every component is open-source or self-hostable. The AI reasoning layer is model-agnostic — swap OpenAI for any LLM provider.</p>
+
+    <div class="tech-grid">
+      <div class="tech-card">
+        <div class="tech-category">API &amp; Orchestration</div>
+        <div class="tech-items">
+          <span class="tech-item">FastAPI (Python 3.11)</span>
+          <span class="tech-item">LangGraph agent pipeline</span>
+          <span class="tech-item">LangChain LCEL</span>
+          <span class="tech-item">Pydantic V2 schemas</span>
+        </div>
+      </div>
+      <div class="tech-card">
+        <div class="tech-category">Spatial Database</div>
+        <div class="tech-items">
+          <span class="tech-item">PostGIS 16</span>
+          <span class="tech-item">H3 hex indexing (Uber)</span>
+          <span class="tech-item">GeoAlchemy2</span>
+          <span class="tech-item">Materialized views</span>
+        </div>
+      </div>
+      <div class="tech-card">
+        <div class="tech-category">Time-Series Database</div>
+        <div class="tech-items">
+          <span class="tech-item">TimescaleDB (PostgreSQL)</span>
+          <span class="tech-item">Continuous aggregates</span>
+          <span class="tech-item">Hypertable partitioning</span>
+          <span class="tech-item">asyncpg (fully async)</span>
+        </div>
+      </div>
+      <div class="tech-card">
+        <div class="tech-category">Machine Learning</div>
+        <div class="tech-items">
+          <span class="tech-item">LSTM (PyTorch)</span>
+          <span class="tech-item">SARIMAX (statsmodels)</span>
+          <span class="tech-item">Weighted ensemble</span>
+          <span class="tech-item">sklearn StandardScaler</span>
+        </div>
+      </div>
+      <div class="tech-card">
+        <div class="tech-category">AI Reasoning</div>
+        <div class="tech-items">
+          <span class="tech-item">OpenAI o3 (default)</span>
+          <span class="tech-item">Model-agnostic design</span>
+          <span class="tech-item">Structured prompt chain</span>
+          <span class="tech-item">Configurable via .env</span>
+        </div>
+      </div>
+      <div class="tech-card">
+        <div class="tech-category">Infrastructure</div>
+        <div class="tech-items">
+          <span class="tech-item">Docker Compose</span>
+          <span class="tech-item">Daily refresh worker</span>
+          <span class="tech-item">structlog (JSON logging)</span>
+          <span class="tech-item">tenacity retry logic</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Use cases ──────────────────────────────────────────────────────────── -->
+<section id="use-cases">
+  <div class="container">
+    <div class="section-eyebrow"><span class="tag tag-green">Use Cases</span></div>
+    <h2 class="section-title">Who uses GeoHarvestAI —<br/>and how.</h2>
+    <p class="section-sub">The same API powers vastly different products depending on who's integrating it.</p>
+
+    <div class="usecase-grid">
+      <div class="usecase-card">
+        <div class="uc-icon">🏦</div>
+        <h3>Agri-finance &amp; crop insurance</h3>
+        <p>Underwrite crop loans and insurance policies with location-specific yield estimates instead of district averages.</p>
+        <ul>
+          <li>Risk scoring per field, not per taluka</li>
+          <li>Season-adjusted credit limits</li>
+          <li>Automated early-warning for yield shortfalls</li>
+        </ul>
+      </div>
+      <div class="usecase-card">
+        <div class="uc-icon">🚜</div>
+        <h3>Input distribution companies</h3>
+        <p>Plan fertiliser, seed, and pesticide inventory by district and season — driven by what the AI says will actually be planted.</p>
+        <ul>
+          <li>Demand forecasting at district level</li>
+          <li>Soil-matched fertiliser recommendations</li>
+          <li>Seed variety suitability scoring</li>
+        </ul>
+      </div>
+      <div class="usecase-card">
+        <div class="uc-icon">📦</div>
+        <h3>Agri supply chain &amp; procurement</h3>
+        <p>Know what volume to expect from which districts before the season starts. Plan procurement, logistics, and cold chain accordingly.</p>
+        <ul>
+          <li>Pre-season volume forecasts by crop</li>
+          <li>Farmer advisory apps (WhatsApp / IVR)</li>
+          <li>FPO-level aggregation dashboards</li>
+        </ul>
+      </div>
+      <div class="usecase-card">
+        <div class="uc-icon">🌱</div>
+        <h3>Extension services &amp; NGOs</h3>
+        <p>Equip field agents with AI-backed recommendations they can deliver to farmers in local languages — no agronomist required.</p>
+        <ul>
+          <li>Field agent mobile app backend</li>
+          <li>Offline-capable district pre-computation</li>
+          <li>Multilingual reasoning output</li>
+        </ul>
+      </div>
+      <div class="usecase-card">
+        <div class="uc-icon">🛰️</div>
+        <h3>Satellite &amp; GIS platforms</h3>
+        <p>Augment existing earth-observation products with ML-powered crop recommendations as a value-added layer.</p>
+        <ul>
+          <li>REST API — integrates in hours</li>
+          <li>H3-native output for spatial joins</li>
+          <li>White-label ready</li>
+        </ul>
+      </div>
+      <div class="usecase-card">
+        <div class="uc-icon">🏛️</div>
+        <h3>Government &amp; development banks</h3>
+        <p>Support MSP procurement planning, PM-KISAN targeting, and NABARD credit deployment with evidence-based yield forecasts.</p>
+        <ul>
+          <li>District-level seasonal outlook</li>
+          <li>On-premise deployment available</li>
+          <li>Full data lineage and audit trail</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CTA ────────────────────────────────────────────────────────────────── -->
+<section class="cta-section">
+  <div class="container" style="text-align:center;">
+    <div class="section-eyebrow" style="justify-content:center;display:flex;margin-bottom:14px;">
+      <span class="tag" style="background:rgba(255,255,255,.12);color:rgba(255,255,255,.8);">Ready to see it live</span>
+    </div>
+    <h2 class="section-title">Try it on any field in India. Right now.</h2>
+    <p class="section-sub">Click the map. Pick a season. Get a recommendation in three seconds.</p>
+    <div class="cta-buttons">
+      <a href="/" class="btn-white">▶ &nbsp; Open live demo</a>
+      <a href="mailto:hello@geoharvestai.com" class="btn-outline" style="color:rgba(255,255,255,.85);border-color:rgba(255,255,255,.3);">Request a full briefing →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ── Footer ─────────────────────────────────────────────────────────────── -->
+<footer>
+  <strong>GeoHarvestAI</strong> &nbsp;·&nbsp; Precision crop intelligence for Indian agriculture &nbsp;·&nbsp; India · 2026
+</footer>
+
+</body>
+</html>
